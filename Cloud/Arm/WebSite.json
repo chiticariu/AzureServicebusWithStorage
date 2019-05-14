@@ -1,0 +1,213 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "productName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environmentName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "storageName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 24
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "B1",
+      "allowedValues": [
+        "F1",
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "metadata": {
+        "description": "Describes plan's pricing tier and instance size. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+      }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "metadata": {
+        "description": "Describes plan's instance count"
+      }
+    },
+    "storageType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_ZRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Premium_LRS"
+      ]
+    }
+  },
+  "variables": {
+    "projectName": "poc",
+    "serviceBusNameSuffix": "-bus",
+    "manageAccessKeyName": "poc",
+    
+    "sbVersion": "2017-04-01",
+    "serviceBusName": "[concat('poc-', parameters('productName'), variables('serviceBusNameSuffix'), '-', parameters('environmentName'))]",
+
+    "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', variables('serviceBusName'), variables('manageAccessKeyName'))]"
+  },
+  "resources": [
+    {
+      "name": "[variables('serviceBusName')]",
+      "type": "Microsoft.ServiceBus/namespaces",
+      "apiVersion": "[variables('sbVersion')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "ServiceBus",
+        "arm-resource": "[concat(parameters('productName'),'-',parameters('environmentName'))]"
+      },
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/AuthorizationRules",
+      "name": "[concat(variables('serviceBusName'), '/', variables('manageAccessKeyName'))]",
+      "apiVersion": "[variables('sbVersion')]",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "rights": [
+          "Manage",
+          "Listen",
+          "Send"
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces', variables('serviceBusName'))]"
+      ]
+    },
+
+    {
+      "name": "[parameters('storageName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "storage",
+        "arm-resource": "[concat(parameters('productName'),'-',parameters('environmentName'))]"
+      },
+      "apiVersion": "2016-01-01",
+      "sku": {
+        "name": "[parameters('storageType')]"
+      },
+      "dependsOn": [],
+      "kind": "Storage"
+    },
+    {
+      "name": "[concat(variables('serviceBusName'), '/sales')]",
+      "type": "Microsoft.ServiceBus/namespaces/queues",
+      "apiVersion": "[variables('sbVersion')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Sales-Servicebus-Queue",
+        "arm-resource": "[concat(parameters('productName'),'-',parameters('environmentName'))]"
+      },
+      "scale": null,
+      "properties": {
+        "lockDuration": "PT30S",
+        "maxSizeInMegabytes": 1024,
+        "requiresDuplicateDetection": false,
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P14D",
+        "deadLetteringOnMessageExpiration": true,
+        "enableBatchedOperations": true,
+        "duplicateDetectionHistoryTimeWindow": "PT10M",
+        "maxDeliveryCount": 10,
+        "status": "Active",
+        "enablePartitioning": true,
+        "enableExpress": false
+      },
+      "dependsOn": [
+        "[concat('Microsoft.ServiceBus/namespaces/', variables('serviceBusName'))]"
+      ]
+    },
+    {
+      "name": "[concat(variables('serviceBusName'), '/billing')]",
+      "type": "Microsoft.ServiceBus/namespaces/queues",
+      "apiVersion": "[variables('sbVersion')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Billing-Servicebus-Queue",
+        "arm-resource": "[concat(parameters('productName'),'-',parameters('environmentName'))]"
+      },
+      "scale": null,
+      "properties": {
+        "lockDuration": "PT30S",
+        "maxSizeInMegabytes": 1024,
+        "requiresDuplicateDetection": false,
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P14D",
+        "deadLetteringOnMessageExpiration": true,
+        "enableBatchedOperations": true,
+        "duplicateDetectionHistoryTimeWindow": "PT10M",
+        "maxDeliveryCount": 10,
+        "status": "Active",
+        "enablePartitioning": true,
+        "enableExpress": false
+      },
+      "dependsOn": [
+        "[concat('Microsoft.ServiceBus/namespaces/', variables('serviceBusName'))]"
+      ]
+    },
+    {
+      "name": "[concat(variables('serviceBusName'), '/warehouse')]",
+      "type": "Microsoft.ServiceBus/namespaces/queues",
+      "apiVersion": "[variables('sbVersion')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Billing-Servicebus-Queue",
+        "arm-resource": "[concat(parameters('productName'),'-',parameters('environmentName'))]"
+      },
+      "scale": null,
+      "properties": {
+        "lockDuration": "PT30S",
+        "maxSizeInMegabytes": 1024,
+        "requiresDuplicateDetection": false,
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P14D",
+        "deadLetteringOnMessageExpiration": true,
+        "enableBatchedOperations": true,
+        "duplicateDetectionHistoryTimeWindow": "PT10M",
+        "maxDeliveryCount": 10,
+        "status": "Active",
+        "enablePartitioning": true,
+        "enableExpress": false
+      },
+      "dependsOn": [
+        "[concat('Microsoft.ServiceBus/namespaces/', variables('serviceBusName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "AzureServiceBusConnString": {
+      "value": "[listKeys(resourceId(concat('Microsoft.ServiceBus/namespaces/AuthorizationRules'),variables('serviceBusName'),variables('manageAccessKeyName')),'2015-08-01').primaryConnectionString]",
+      "type": "string"
+    },
+    "StorageConnString": {
+      "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageName')), '2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net')]",
+      "type": "string"
+    } 
+  }
+}
